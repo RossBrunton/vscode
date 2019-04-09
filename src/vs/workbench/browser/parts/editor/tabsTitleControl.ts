@@ -37,7 +37,7 @@ import { addClass, addDisposableListener, hasClass, EventType, EventHelper, remo
 import { localize } from 'vs/nls';
 import { IEditorGroupsAccessor, IEditorGroupView } from 'vs/workbench/browser/parts/editor/editor';
 import { CloseOneEditorAction } from 'vs/workbench/browser/parts/editor/editorActions';
-import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
+import { IConfigurationService, IConfigurationChangeEvent } from 'vs/platform/configuration/common/configuration';
 import { BreadcrumbsControl } from 'vs/workbench/browser/parts/editor/breadcrumbsControl';
 import { IFileService } from 'vs/platform/files/common/files';
 import { withNullAsUndefined, assertAllDefined, assertIsDefined } from 'vs/base/common/types';
@@ -67,6 +67,13 @@ export class TabsTitleControl extends TitleControl {
 	private dimension: Dimension | undefined;
 	private readonly layoutScheduled = this._register(new MutableDisposable());
 	private blockRevealActiveTab: boolean | undefined;
+
+	// Mouse wheel scrolling
+	private wheelEvent?: IDisposable;
+	private tabScrollingEnabled: boolean = false;
+	private tabScrollingReverse: boolean;
+	private tabScrollingWrap: boolean;
+	private tabScrollingForced: boolean;
 
 	constructor(
 		parent: HTMLElement,
@@ -114,6 +121,22 @@ export class TabsTitleControl extends TitleControl {
 		// Tabs Container listeners
 		this.registerTabsContainerListeners(this.tabsContainer, this.tabsScrollbar);
 
+		// Tab scrolling with the scroll wheel
+		this.configurationService.onDidChangeConfiguration((e: IConfigurationChangeEvent) => {
+			if (this.configurationService.getValue('window.scrollableTabsEnable')) {
+				if (!this.tabScrollingEnabled) {
+					this.enableTabWheelScrolling();
+				}
+			} else {
+				if (this.tabScrollingEnabled) {
+					this.disableTabWheelScrolling();
+				}
+			}
+			this.tabScrollingReverse = this.configurationService.getValue('window.scrollableTabsReverse');
+			this.tabScrollingWrap = this.configurationService.getValue('window.scrollableTabsWrap');
+			this.tabScrollingForced = this.configurationService.getValue('window.scrollableTabsForced');
+		});
+
 		// Editor Toolbar Container
 		this.editorToolbarContainer = document.createElement('div');
 		addClass(this.editorToolbarContainer, 'editor-actions');
@@ -127,6 +150,58 @@ export class TabsTitleControl extends TitleControl {
 		addClass(breadcrumbsContainer, 'tabs-breadcrumbs');
 		this.titleContainer.appendChild(breadcrumbsContainer);
 		this.createBreadcrumbsControl(breadcrumbsContainer, { showFileIcons: true, showSymbolIcons: true, showDecorationColors: false, breadcrumbsBackground: breadcrumbsBackground });
+	}
+
+	private enableTabWheelScrolling() {
+		if (this.tabsContainer === undefined) {
+			return;
+		}
+		this.wheelEvent = addDisposableListener(this.tabsContainer, 'mousewheel', (e: WheelEvent) => {
+			if (this.tabsScrollbar === undefined) {
+				return;
+			}
+			let scroll_dim = this.tabsScrollbar.getScrollDimensions();
+			if (scroll_dim.width < scroll_dim.scrollWidth && !this.tabScrollingForced) {
+				// If the tabs are overflowing, we may want to disable scroll wheel tab changes
+				return;
+			}
+
+			let up = e.deltaX < 0 || e.deltaY < 0;
+			if (this.tabScrollingReverse) {
+				up = !up;
+			}
+
+			let active_editor = this.group.activeEditor;
+			if (active_editor === null) {
+				return;
+			}
+			let active_idx = this.group.getIndexOfEditor(active_editor);
+
+			let new_idx = active_idx + (up ? -1 : 1);
+
+			if (this.tabScrollingWrap) {
+				let max_idx = this.group.count - 1;
+				if (new_idx === -1) {
+					new_idx = max_idx;
+				} else if (new_idx === max_idx + 1) {
+					new_idx = 0;
+				}
+			}
+
+			let new_editor = this.group.getEditor(new_idx);
+			if (new_editor === null) {
+				return;
+			}
+
+			this.group.openEditor(new_editor!);
+		});
+		this.tabScrollingEnabled = true;
+	}
+
+	private disableTabWheelScrolling() {
+		dispose(this.wheelEvent);
+		this.wheelEvent = undefined;
+		this.tabScrollingEnabled = false;
 	}
 
 	private createTabsScrollbar(scrollable: HTMLElement): ScrollableElement {
@@ -1192,6 +1267,7 @@ export class TabsTitleControl extends TitleControl {
 		super.dispose();
 
 		this.tabDisposables = dispose(this.tabDisposables);
+		dispose(this.wheelEvent);
 	}
 }
 
