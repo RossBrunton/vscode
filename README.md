@@ -1,3 +1,10 @@
+This is a modified version of vscode with the following changes:
+
+* Scrolling the tab bar is now possible (like in Chrome and Cinnamon!)
+* An option for the search bar to be the maximum width has been added
+
+----
+
 # Visual Studio Code - Open Source ("Code - OSS")
 
 <!-- [![Build Status](https://dev.azure.com/vscode/VSCode/_apis/build/status/VS%20Code?branchName=master)](https://aka.ms/vscode-builds) -->
