@@ -3037,6 +3037,7 @@ declare namespace monaco.editor {
 		 */
 		autoFindInSelection?: boolean;
 		addExtraSpaceOnTop?: boolean;
+		alwaysUseMaxWidth?: boolean;
 	}
 
 	export type EditorFindOptions = Readonly<Required<IEditorFindOptions>>;

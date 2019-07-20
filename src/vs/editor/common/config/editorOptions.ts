@@ -1110,6 +1110,10 @@ export interface IEditorFindOptions {
 	 * Controls if the Find Widget should read or modify the shared find clipboard on macOS
 	 */
 	globalFindClipboard?: boolean;
+	/*
+	 * Controls whether the Find Widget should always use the max width.
+	 */
+	alwaysUseMaxWidth?: boolean;
 }
 
 export type EditorFindOptions = Readonly<Required<IEditorFindOptions>>;
@@ -1121,7 +1125,8 @@ class EditorFind extends BaseEditorOption<EditorOption.find, EditorFindOptions> 
 			seedSearchStringFromSelection: true,
 			autoFindInSelection: false,
 			globalFindClipboard: false,
-			addExtraSpaceOnTop: true
+			addExtraSpaceOnTop: true,
+			alwaysUseMaxWidth: false
 		};
 		super(
 			EditorOption.find, 'find', defaults,
@@ -1146,7 +1151,12 @@ class EditorFind extends BaseEditorOption<EditorOption.find, EditorFindOptions> 
 					type: 'boolean',
 					default: defaults.addExtraSpaceOnTop,
 					description: nls.localize('find.addExtraSpaceOnTop', "Controls whether the Find Widget should add extra lines on top of the editor. When true, you can scroll beyond the first line when the Find Widget is visible.")
-				}
+				},
+				'editor.find.alwaysUseMaxWidth': {
+					'type': 'boolean',
+					'default': false,
+					'description': nls.localize('find.alwaysUseMaxWidth', "Controls whether the Find Widget should always be the maximum width.")
+				},
 			}
 		);
 	}
@@ -1160,7 +1170,8 @@ class EditorFind extends BaseEditorOption<EditorOption.find, EditorFindOptions> 
 			seedSearchStringFromSelection: EditorBooleanOption.boolean(input.seedSearchStringFromSelection, this.defaultValue.seedSearchStringFromSelection),
 			autoFindInSelection: EditorBooleanOption.boolean(input.autoFindInSelection, this.defaultValue.autoFindInSelection),
 			globalFindClipboard: EditorBooleanOption.boolean(input.globalFindClipboard, this.defaultValue.globalFindClipboard),
-			addExtraSpaceOnTop: EditorBooleanOption.boolean(input.addExtraSpaceOnTop, this.defaultValue.addExtraSpaceOnTop)
+			addExtraSpaceOnTop: EditorBooleanOption.boolean(input.addExtraSpaceOnTop, this.defaultValue.addExtraSpaceOnTop),
+			alwaysUseMaxWidth: EditorBooleanOption.boolean(input.alwaysUseMaxWidth, this.defaultValue.alwaysUseMaxWidth)
 		};
 	}
 }

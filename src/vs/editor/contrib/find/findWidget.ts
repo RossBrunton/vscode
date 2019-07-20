@@ -184,7 +184,7 @@ export class FindWidget extends Widget implements IOverlayWidget, IHorizontalSas
 				}
 				this._updateButtons();
 			}
-			if (e.hasChanged(EditorOption.layoutInfo)) {
+			if (e.hasChanged(EditorOption.layoutInfo) || e.hasChanged(EditorOption.find)) {
 				this._tryUpdateWidgetWidth();
 			}
 
@@ -644,12 +644,12 @@ export class FindWidget extends Widget implements IOverlayWidget, IHorizontalSas
 		}
 		if (!dom.isInDOM(this._domNode)) {
 			// the widget is not in the DOM
-			return;
+			// TODO: Investigate why this breaks alwaysUseMaxWidth
+			//return;
 		}
 
 		const layoutInfo = this._codeEditor.getLayoutInfo();
 		const editorContentWidth = layoutInfo.contentWidth;
-
 		if (editorContentWidth <= 0) {
 			// for example, diff view original editor
 			dom.addClass(this._domNode, 'hiddenEditor');
@@ -658,8 +658,19 @@ export class FindWidget extends Widget implements IOverlayWidget, IHorizontalSas
 			dom.removeClass(this._domNode, 'hiddenEditor');
 		}
 
-		const editorWidth = layoutInfo.width;
-		const minimapWidth = layoutInfo.minimapWidth;
+		let configMaxWidth = this._codeEditor.getOption(EditorOption.find).alwaysUseMaxWidth;
+		let editorWidth = layoutInfo.width;
+		let minimapWidth = layoutInfo.minimapWidth;
+		let maxWidthVal = `${editorWidth - 28 - minimapWidth - 15}px`;
+
+		if (configMaxWidth) {
+			// Use min width so that if the user toggles the option off while the widget is open, it remembers its width
+			this._domNode.style.minWidth = maxWidthVal;
+			// Hide the drag-scroll widget
+			(this._domNode.getElementsByClassName('monaco-sash')[0] as HTMLElement).style.display = 'none';
+			return;
+		}
+
 		let collapsedFindWidget = false;
 		let reducedFindWidget = false;
 		let narrowFindWidget = false;
@@ -669,7 +680,7 @@ export class FindWidget extends Widget implements IOverlayWidget, IHorizontalSas
 
 			if (widgetWidth > FIND_WIDGET_INITIAL_WIDTH) {
 				// as the widget is resized by users, we may need to change the max width of the widget as the editor width changes.
-				this._domNode.style.maxWidth = `${editorWidth - 28 - minimapWidth - 15}px`;
+				this._domNode.style.maxWidth = maxWidthVal;
 				this._replaceInput.width = dom.getTotalWidth(this._findInput.domNode);
 				return;
 			}
@@ -700,6 +711,9 @@ export class FindWidget extends Widget implements IOverlayWidget, IHorizontalSas
 				this._replaceInput.width = findInputWidth;
 			}
 		}
+
+		(this._domNode.getElementsByClassName('monaco-sash')[0] as HTMLElement).style.display = '';
+		this._domNode.style.minWidth = '';
 	}
 
 	private _getHeight(): number {
